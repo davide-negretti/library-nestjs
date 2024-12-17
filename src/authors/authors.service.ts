@@ -14,7 +14,11 @@ export class AuthorsService {
     return authorDocument.save();
   }
 
-  find(query: string): Promise<AuthorDocument[]> {
+  find(
+    query: string,
+    skip?: number,
+    limit?: number,
+  ): Promise<AuthorDocument[]> {
     const regExp = new RegExp(`${query}`, 'i');
     const filterQuery: RootFilterQuery<Author> = {
       $or: [
@@ -29,7 +33,11 @@ export class AuthorsService {
       ],
     };
 
-    return this.authorModel.find(filterQuery).exec();
+    return this.authorModel
+      .find(filterQuery)
+      .sort('name.sorting')
+      .limit(limit)
+      .skip(skip);
   }
 
   findAll(): Promise<AuthorDocument[]> {
