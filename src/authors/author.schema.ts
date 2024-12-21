@@ -1,40 +1,15 @@
-import { Prop, raw, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import { model, Schema, Types } from 'mongoose';
 
-export const AUTHOR_SCHEMA_NAME = 'Author';
+const authorNameVariantSchema = new Schema({
+  display: { type: String, required: true },
+  sorting: { type: String, required: true },
+  type: { type: String, required: true },
+  script: { type: String, default: 'Latn' },
+});
 
-export type AuthorDocument = HydratedDocument<Author>;
+export const authorSchema = new Schema({
+  nameVariants: [authorNameVariantSchema],
+  mainVariantId: { type: Types.ObjectId, required: true },
+});
 
-@Schema()
-export class AuthorNameVariant {
-  @Prop({ required: true })
-  display: string;
-
-  @Prop({ required: true })
-  sorting: string;
-
-  @Prop({ required: true })
-  type: string;
-
-  @Prop({ type: Map, of: String })
-  details: Map<string, string>;
-
-  @Prop({ required: true })
-  script: string;
-}
-
-@Schema()
-export class Author {
-  @Prop(
-    raw({
-      display: { type: String, required: true },
-      sorting: { type: String, required: true },
-    }),
-  )
-  name: string;
-
-  @Prop([AuthorNameVariant])
-  nameVariants: [AuthorNameVariant];
-}
-
-export const AuthorSchema = SchemaFactory.createForClass(Author);
+export const authorModel = model('Author', authorSchema);

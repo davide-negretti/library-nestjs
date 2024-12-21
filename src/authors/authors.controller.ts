@@ -9,15 +9,16 @@ import {
   Query,
 } from '@nestjs/common';
 import { PaginatedResponse } from '../models/paginated-response.interface';
-import { AuthorDocument } from './author.schema';
 import { AuthorsService } from './authors.service';
+import { CreateAuthorDto } from './dto/createAuthor.dto';
+import { Author } from './interfaces/author.interface';
 
 @Controller('authors')
 export class AuthorsController {
   constructor(private service: AuthorsService) {}
 
   @Get()
-  findAll(): Promise<AuthorDocument[]> {
+  findAll(): Promise<Author[]> {
     return this.service.findAll();
   }
 
@@ -26,7 +27,7 @@ export class AuthorsController {
     @Query('q') query: string,
     @Query('from') startFrom = '0',
     @Query('size') pageSize = '20',
-  ): Promise<PaginatedResponse<AuthorDocument>> {
+  ): Promise<PaginatedResponse<Author>> {
     if (isNaN(+startFrom) || +startFrom < 0) {
       throw new BadRequestException(
         `Invalid parameter: startFrom=${startFrom}`,
@@ -35,7 +36,7 @@ export class AuthorsController {
     if (isNaN(+pageSize) || +pageSize < 1) {
       throw new BadRequestException(`Invalid parameter: pageSize=${pageSize}`);
     }
-    const responseData: AuthorDocument[] = await this.service.find(
+    const responseData: Author[] = await this.service.find(
       query,
       +startFrom,
       +pageSize,
@@ -44,11 +45,11 @@ export class AuthorsController {
       data: responseData,
       startFrom: +startFrom,
       pageSize: +pageSize,
-    } as PaginatedResponse<AuthorDocument>;
+    } as PaginatedResponse<Author>;
   }
 
   @Get('/:id')
-  async findById(@Param('id') id: string): Promise<AuthorDocument> {
+  async findById(@Param('id') id: string): Promise<Author> {
     try {
       return await this.service.findById(id);
     } catch {
@@ -57,7 +58,8 @@ export class AuthorsController {
   }
 
   @Post()
-  create(@Body() body: AuthorDocument): Promise<AuthorDocument> {
+  create(@Body() body: CreateAuthorDto): Promise<Author> {
+    console.log('BODY', body);
     return this.service.create(body);
   }
 }
