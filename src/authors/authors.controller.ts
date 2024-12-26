@@ -6,6 +6,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { PaginatedResponse } from '../models/paginated-response.interface';
@@ -46,6 +47,14 @@ export class AuthorsController {
       startFrom: +startFrom,
       pageSize: +pageSize,
     } as PaginatedResponse<Author>;
+  }
+
+  @Put('/:id/main-variant')
+  async setMainVariant(
+    @Param('id') id: string,
+    @Body() body: { mainVariantId: string } | Author,
+  ): Promise<Author> {
+    return this.service.setMainVariant(id, body.mainVariantId);
   }
 
   @Get('/:id')

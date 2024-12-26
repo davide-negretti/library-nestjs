@@ -47,4 +47,11 @@ export class AuthorsService {
   findById(id: string) {
     return this.authorModel.findById(id).exec();
   }
+
+  async setMainVariant(authorId: string, mainVariantId: string) {
+    // TODO: check if mainVariantId is valid
+    const author = await this.authorModel.findById(authorId);
+    author.mainVariantId = mainVariantId;
+    return author.save();
+  }
 }
