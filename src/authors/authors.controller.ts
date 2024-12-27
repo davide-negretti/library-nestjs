@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
@@ -55,6 +56,14 @@ export class AuthorsController {
     @Body() body: { mainVariantId: string } | Author,
   ): Promise<Author> {
     return this.service.setMainVariant(id, body.mainVariantId);
+  }
+
+  @Delete('/:id/variants/:variantId')
+  async deleteVariant(
+    @Param('id') id: string,
+    @Param('variantId') variantId: string,
+  ) {
+    return this.service.deleteVariantById(id, variantId);
   }
 
   @Get('/:id')
