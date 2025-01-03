@@ -1,12 +1,12 @@
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
-interface AuthorNameVariant extends Document<string> {
+export interface AuthorNameVariant extends Document<string> {
   display: string;
   sorting: string;
   type: string;
 }
 
 export interface Author extends Document<string> {
-  nameVariants: AuthorNameVariant[];
+  nameVariants: Types.DocumentArray<AuthorNameVariant>;
   mainVariantId: string;
 }

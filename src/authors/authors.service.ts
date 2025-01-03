@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, RootFilterQuery } from 'mongoose';
 import { CreateAuthorDto } from './dto/createAuthor.dto';
 import { Author } from './interfaces/author.interface';
+import { SaveAuthorNameVariantDto } from './dto/saveAuthorNameVariant.dto';
 
 @Injectable()
 export class AuthorsService {
@@ -48,11 +49,13 @@ export class AuthorsService {
     return this.authorModel.findById(id).exec();
   }
 
-  async setMainVariant(authorId: string, mainVariantId: string) {
+  setMainVariant(authorId: string, mainVariantId: string) {
     // TODO: check if mainVariantId is valid
-    const author = await this.authorModel.findById(authorId);
-    author.mainVariantId = mainVariantId;
-    return author.save();
+    return this.authorModel.findByIdAndUpdate(
+      authorId,
+      { mainVariantId },
+      { new: true },
+    );
   }
 
   async deleteVariantById(id: string, variantId: string) {
