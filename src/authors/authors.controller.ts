@@ -6,6 +6,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Put,
   Query,
@@ -13,7 +14,8 @@ import {
 import { PaginatedResponse } from '../models/paginated-response.interface';
 import { AuthorsService } from './authors.service';
 import { CreateAuthorDto } from './dto/createAuthor.dto';
-import { Author } from './interfaces/author.interface';
+import { Author, AuthorNameVariant } from './interfaces/author.interface';
+import { SaveAuthorNameVariantDto } from './dto/saveAuthorNameVariant.dto';
 
 @Controller('authors')
 export class AuthorsController {
@@ -64,6 +66,19 @@ export class AuthorsController {
     @Param('variantId') variantId: string,
   ) {
     return this.service.deleteVariantById(id, variantId);
+  }
+
+  @Patch('/:id/variants/:variantId')
+  async saveVariant(
+    @Param('id') authorId: string,
+    @Param('variantId') variantId: string,
+    @Body() body: AuthorNameVariant,
+  ) {
+    const variant: SaveAuthorNameVariantDto = Object.assign(
+      { ...body },
+      { _id: variantId },
+    );
+    return this.service.saveVariant(authorId, variant);
   }
 
   @Get('/:id')

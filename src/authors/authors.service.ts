@@ -58,6 +58,15 @@ export class AuthorsService {
     );
   }
 
+  async saveVariant(authorId: string, variant: SaveAuthorNameVariantDto) {
+    // TODO: check if variant exists
+    const variantId = variant._id;
+    const authorDocument = await this.authorModel.findById(authorId).exec();
+    Object.assign(authorDocument.nameVariants.id(variantId), variant);
+    console.log('DOC', authorDocument);
+    return await authorDocument.save();
+  }
+
   async deleteVariantById(id: string, variantId: string) {
     return this.authorModel.findByIdAndUpdate(
       id,
