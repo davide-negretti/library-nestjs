@@ -6,16 +6,14 @@ import {
   Get,
   NotFoundException,
   Param,
-  Patch,
   Post,
   Put,
   Query,
 } from '@nestjs/common';
 import { PaginatedResponse } from '../models/paginated-response.interface';
 import { AuthorsService } from './authors.service';
-import { CreateAuthorDto } from './dto/createAuthor.dto';
-import { Author, AuthorNameVariant } from './interfaces/author.interface';
-import { SaveAuthorNameVariantDto } from './dto/saveAuthorNameVariant.dto';
+import { Author } from './interfaces/author.interface';
+import { AuthorNameVariantDto } from './dto/authorNameVariant.dto';
 
 @Controller('authors')
 export class AuthorsController {
@@ -68,17 +66,20 @@ export class AuthorsController {
     return this.service.deleteVariantById(id, variantId);
   }
 
-  @Patch('/:id/variants/:variantId')
+  @Put('/:id/variants')
   async saveVariant(
     @Param('id') authorId: string,
-    @Param('variantId') variantId: string,
-    @Body() body: AuthorNameVariant,
+    @Body() body: AuthorNameVariantDto,
   ) {
-    const variant: SaveAuthorNameVariantDto = Object.assign(
-      { ...body },
-      { _id: variantId },
-    );
-    return this.service.saveVariant(authorId, variant);
+    return this.service.saveVariant(authorId, body);
+  }
+
+  @Post('/:id/variants')
+  createVariant(
+    @Param('id') authorId: string,
+    @Body() body: AuthorNameVariantDto,
+  ): Promise<Author> {
+    return this.service.createVariant(authorId, body);
   }
 
   @Get('/:id')
@@ -91,8 +92,7 @@ export class AuthorsController {
   }
 
   @Post()
-  create(@Body() body: CreateAuthorDto): Promise<Author> {
-    console.log('BODY', body);
-    return this.service.create(body);
+  create(@Body() nameVariant: AuthorNameVariantDto): Promise<Author> {
+    return this.service.create(nameVariant);
   }
 }

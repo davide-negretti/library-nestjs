@@ -1,9 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, RootFilterQuery } from 'mongoose';
-import { CreateAuthorDto } from './dto/createAuthor.dto';
 import { Author } from './interfaces/author.interface';
-import { SaveAuthorNameVariantDto } from './dto/saveAuthorNameVariant.dto';
+import { AuthorNameVariantDto } from './dto/authorNameVariant.dto';
 
 @Injectable()
 export class AuthorsService {
@@ -11,18 +10,13 @@ export class AuthorsService {
     @InjectModel('Author') private readonly authorModel: Model<Author>,
   ) {}
 
-  create(author: CreateAuthorDto) {
-    // TODO: handle variants
+  /**
+   * Create a new author and set the name variant as main
+   * @param nameVariant the main name variant
+   */
+  create(nameVariant: AuthorNameVariantDto) {
     const authorDocument = new this.authorModel({
-      nameVariants: [
-        {
-          display: author.name.display,
-          sorting: author.name.sorting,
-          details: undefined,
-          script: 'Latn',
-          type: 'main',
-        },
-      ],
+      nameVariants: [nameVariant],
     });
 
     authorDocument.mainVariantId = authorDocument.nameVariants[0]._id;
@@ -58,12 +52,28 @@ export class AuthorsService {
     );
   }
 
-  async saveVariant(authorId: string, variant: SaveAuthorNameVariantDto) {
-    // TODO: check if variant exists
-    const variantId = variant._id;
+  async saveVariant(authorId: string, variant: AuthorNameVariantDto) {
+    // TODO: check if variant exists by ID
+    return await this.authorModel
+      .findOneAndUpdate(
+        {
+          _id: authorId,
+          'nameVariants._id': variant._id,
+        },
+        {
+          $set: {
+            'nameVariants.$': variant,
+          },
+        },
+        { new: true },
+      )
+      .exec();
+  }
+
+  async createVariant(authorId: string, variant: AuthorNameVariantDto) {
+    // TODO: check if variant exists by values
     const authorDocument = await this.authorModel.findById(authorId).exec();
-    Object.assign(authorDocument.nameVariants.id(variantId), variant);
-    console.log('DOC', authorDocument);
+    authorDocument.nameVariants.push(variant);
     return await authorDocument.save();
   }
 

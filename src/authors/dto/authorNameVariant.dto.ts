@@ -1,4 +1,4 @@
-export class SaveAuthorNameVariantDto {
+export class AuthorNameVariantDto {
   display: string;
   sorting: string;
   type: string;
