@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, RootFilterQuery } from 'mongoose';
+import { AuthorNameVariantDto } from './dto/author-name-variant.dto';
+import { NewAuthorDto } from './dto/new-author.dto';
 import { Author } from './interfaces/author.interface';
-import { AuthorNameVariantDto } from './dto/authorNameVariant.dto';
 
 @Injectable()
 export class AuthorsService {
@@ -10,13 +11,16 @@ export class AuthorsService {
     @InjectModel('Author') private readonly authorModel: Model<Author>,
   ) {}
 
-  /**
-   * Create a new author and set the name variant as main
-   * @param nameVariant the main name variant
-   */
-  create(nameVariant: AuthorNameVariantDto) {
+  create(author: NewAuthorDto) {
     const authorDocument = new this.authorModel({
-      nameVariants: [nameVariant],
+      nameVariants: [
+        {
+          display: author.display,
+          sorting: author.sorting,
+          type: author.mainNameVariantType,
+        },
+      ],
+      type: author.authorType,
     });
 
     authorDocument.mainVariantId = authorDocument.nameVariants[0]._id;

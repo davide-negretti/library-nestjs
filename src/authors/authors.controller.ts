@@ -12,8 +12,9 @@ import {
 } from '@nestjs/common';
 import { PaginatedResponse } from '../models/paginated-response.interface';
 import { AuthorsService } from './authors.service';
+import { AuthorNameVariantDto } from './dto/author-name-variant.dto';
+import { NewAuthorDto } from './dto/new-author.dto';
 import { Author } from './interfaces/author.interface';
-import { AuthorNameVariantDto } from './dto/authorNameVariant.dto';
 
 @Controller('authors')
 export class AuthorsController {
@@ -92,7 +93,7 @@ export class AuthorsController {
   }
 
   @Post()
-  create(@Body() nameVariant: AuthorNameVariantDto): Promise<Author> {
-    return this.service.create(nameVariant);
+  create(@Body() author: NewAuthorDto): Promise<Author> {
+    return this.service.create(author);
   }
 }

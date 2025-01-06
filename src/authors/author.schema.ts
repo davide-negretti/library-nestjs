@@ -1,4 +1,4 @@
-import { model, Schema, Types } from 'mongoose';
+import { model, Schema } from 'mongoose';
 
 const authorNameVariantSchema = new Schema({
   display: { type: String, required: true },
@@ -8,8 +8,13 @@ const authorNameVariantSchema = new Schema({
 });
 
 export const authorSchema = new Schema({
-  nameVariants: [authorNameVariantSchema],
-  mainVariantId: { type: Types.ObjectId, required: true },
+  nameVariants: { type: [authorNameVariantSchema], required: true },
+  mainVariantId: { type: Schema.Types.ObjectId, required: true },
+  type: {
+    type: String,
+    enum: ['person', 'corporate', 'collective'],
+    required: true,
+  },
 });
 
 export const authorModel = model('Author', authorSchema);
