@@ -10,45 +10,46 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
-import { PaginatedResponse } from '../models/paginated-response.interface';
 import { AuthorsService } from './authors.service';
 import { AuthorNameVariantDto } from './dto/author-name-variant.dto';
 import { NewAuthorDto } from './dto/new-author.dto';
 import { Author } from './interfaces/author.interface';
+
+interface PaginationParameters {
+  skip: number;
+  limit: number;
+}
 
 @Controller('authors')
 export class AuthorsController {
   constructor(private service: AuthorsService) {}
 
   @Get()
-  findAll(): Promise<Author[]> {
-    return this.service.findAll();
+  async findAuthors(
+    @Query('q') query: string,
+    @Query('from') from: string,
+    @Query('page') page: string,
+    @Query('pageSize') pageSize: string,
+  ) {
+    const { skip, limit } = this.paginationParameters(from, page, pageSize);
+    const res = await this.service.paginatedFindAuthors(query, +skip, +limit);
+    return res[0];
   }
 
-  @Get('/search')
-  async search(
+  @Get('/variants')
+  async findNameVariants(
     @Query('q') query: string,
-    @Query('from') startFrom = '0',
-    @Query('size') pageSize = '20',
-  ): Promise<PaginatedResponse<Author>> {
-    if (isNaN(+startFrom) || +startFrom < 0) {
-      throw new BadRequestException(
-        `Invalid parameter: startFrom=${startFrom}`,
-      );
-    }
-    if (isNaN(+pageSize) || +pageSize < 1) {
-      throw new BadRequestException(`Invalid parameter: pageSize=${pageSize}`);
-    }
-    const responseData: Author[] = await this.service.find(
+    @Query('from') from: string,
+    @Query('page') page: string,
+    @Query('pageSize') pageSize: string,
+  ) {
+    const { skip, limit } = this.paginationParameters(from, page, pageSize);
+    const res = await this.service.paginatedFindAuthorNameVariants(
       query,
-      +startFrom,
-      +pageSize,
+      +skip,
+      +limit,
     );
-    return {
-      data: responseData,
-      startFrom: +startFrom,
-      pageSize: +pageSize,
-    } as PaginatedResponse<Author>;
+    return res[0];
   }
 
   @Put('/:id/main-variant')
@@ -95,5 +96,34 @@ export class AuthorsController {
   @Post()
   create(@Body() author: NewAuthorDto): Promise<Author> {
     return this.service.create(author);
+  }
+
+  private paginationParameters(
+    from: string,
+    page: string,
+    pageSize: string,
+  ): PaginationParameters {
+    if (!!from === !!page) {
+      throw new BadRequestException(
+        `Invalid parameters: specify either 'from' or 'page'`,
+      );
+    }
+    if (from && (isNaN(+from) || +from < 0 || +from % +pageSize > 0)) {
+      throw new BadRequestException(
+        `Invalid parameter: from=${from} should be a number >= 0 and multiple of ${pageSize}`,
+      );
+    }
+    if (page && (isNaN(+page) || +page < 1)) {
+      throw new BadRequestException(
+        `Invalid parameter: page=${page} should be a number >= 1`,
+      );
+    }
+    if (pageSize && (isNaN(+pageSize) || +pageSize < 1)) {
+      throw new BadRequestException(
+        `Invalid parameter: pageSize=${pageSize} should be a number >= 1`,
+      );
+    }
+
+    return { skip: from ? +from : +pageSize * (+page - 1), limit: +pageSize };
   }
 }

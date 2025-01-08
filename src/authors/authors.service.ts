@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, RootFilterQuery } from 'mongoose';
+import { FilterQuery, Model, PipelineStage, RootFilterQuery } from 'mongoose';
 import { AuthorNameVariantDto } from './dto/author-name-variant.dto';
 import { NewAuthorDto } from './dto/new-author.dto';
 import { Author } from './interfaces/author.interface';
@@ -10,6 +10,73 @@ export class AuthorsService {
   constructor(
     @InjectModel('Author') private readonly authorModel: Model<Author>,
   ) {}
+
+  paginatedFindAuthors(
+    query: string | undefined = undefined,
+    skip = 0,
+    limit = 20,
+  ) {
+    const queryStages: PipelineStage[] = [];
+    if (query?.length) {
+      const words = query.split(' ');
+      queryStages.push(this.authorMatchStage(words));
+    }
+    return this.authorModel
+      .aggregate([
+        ...queryStages,
+        this.addMainNameVariantStage(),
+        {
+          $project: {
+            _id: 1,
+            mainNameVariant: 1,
+          },
+        },
+        {
+          $sort: {
+            'mainNameVariant.sorting': 1,
+          },
+        },
+        this.collectDataStage(skip, limit),
+        this.addPaginationDataStage(skip, limit),
+      ])
+      .exec();
+  }
+
+  paginatedFindAuthorNameVariants(
+    query: string | undefined = undefined,
+    skip = 0,
+    limit = 20,
+  ) {
+    const queryStages: PipelineStage[] = [];
+    const words = query?.split(' ');
+    if (words.length) {
+      queryStages.push(this.authorMatchStage(words));
+      queryStages.push(this.authorNameVariantFilterStage(words));
+    }
+    return this.authorModel
+      .aggregate([
+        ...queryStages,
+        { $unwind: '$nameVariants' },
+        {
+          $project: {
+            mergedFields: {
+              $mergeObjects: [{ authorId: '$_id' }, '$nameVariants'],
+            },
+          },
+        },
+        {
+          $replaceRoot: { newRoot: '$mergedFields' },
+        },
+        {
+          $sort: {
+            sorting: 1,
+          },
+        },
+        this.collectDataStage(skip, limit),
+        this.addPaginationDataStage(skip, limit),
+      ])
+      .exec();
+  }
 
   create(author: NewAuthorDto) {
     const authorDocument = new this.authorModel({
@@ -93,5 +160,119 @@ export class AuthorsService {
       },
       { new: true },
     );
+  }
+
+  private addMainNameVariantStage(): PipelineStage.AddFields {
+    return {
+      $addFields: {
+        mainNameVariant: {
+          $arrayElemAt: [
+            {
+              $filter: {
+                input: '$nameVariants',
+                as: 'variant',
+                cond: { $eq: ['$$variant._id', '$mainVariantId'] },
+              },
+            },
+            0,
+          ],
+        },
+      },
+    };
+  }
+
+  private authorMatchStage(matches: string[]): PipelineStage.Match {
+    const fq: FilterQuery<Author> = {
+      nameVariants: {
+        $elemMatch: {
+          $and: matches.map((match) => ({
+            display: { $regex: match, $options: 'i' },
+          })),
+        },
+      },
+    };
+    return {
+      $match: fq,
+    };
+  }
+
+  private authorNameVariantFilterStage(
+    matches: string[],
+  ): PipelineStage.Project {
+    const fq: FilterQuery<Author> = {
+      nameVariants: {
+        $filter: {
+          input: '$nameVariants',
+          as: 'variant',
+          cond: {
+            $and: matches.map((match) => ({
+              $regexMatch: {
+                input: '$$variant.display',
+                regex: match,
+                options: 'i',
+              },
+            })),
+          },
+        },
+      },
+    };
+    return {
+      $project: fq,
+    };
+  }
+
+  private collectDataStage(skip: number, limit: number): PipelineStage.Facet {
+    return {
+      $facet: {
+        data: [{ $skip: skip }, { $limit: limit }],
+        pagination: [{ $count: 'totalCount' }],
+      },
+    };
+  }
+
+  private addPaginationDataStage(
+    skip: number,
+    limit: number,
+  ): PipelineStage.AddFields {
+    return {
+      $addFields: {
+        pagination: {
+          $mergeObjects: [
+            { skip, limit },
+            { totalCount: { $arrayElemAt: ['$pagination.totalCount', 0] } },
+            {
+              isLastPage: {
+                $lte: [
+                  { $arrayElemAt: ['$pagination.totalCount', 0] },
+                  skip + limit,
+                ],
+              },
+            },
+            {
+              currentPage: {
+                $add: [
+                  {
+                    $ceil: {
+                      $divide: [skip, limit],
+                    },
+                  },
+                  1,
+                ],
+              },
+            },
+            {
+              totalPages: {
+                $ceil: {
+                  $divide: [
+                    { $arrayElemAt: ['$pagination.totalCount', 0] },
+                    limit,
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      },
+    };
   }
 }
