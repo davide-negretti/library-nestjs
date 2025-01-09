@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { FilterQuery, Model, PipelineStage, RootFilterQuery } from 'mongoose';
+import { FilterQuery, Model, PipelineStage } from 'mongoose';
 import { AuthorNameVariantDto } from './dto/author-name-variant.dto';
 import { NewAuthorDto } from './dto/new-author.dto';
 import { Author } from './interfaces/author.interface';
@@ -17,18 +17,19 @@ export class AuthorsService {
     limit = 20,
   ) {
     const queryStages: PipelineStage[] = [];
-    if (query?.length) {
-      const words = query.split(' ');
+    const words = query?.split(' ');
+    if (words.length) {
       queryStages.push(this.authorMatchStage(words));
     }
     return this.authorModel
       .aggregate([
         ...queryStages,
-        this.addMainNameVariantStage(),
+        this.addMainNameVariantStage(words),
         {
           $project: {
             _id: 1,
             mainNameVariant: 1,
+            matchingNameVariants: words.length ? 1 : 0,
           },
         },
         {
@@ -94,22 +95,6 @@ export class AuthorsService {
     return authorDocument.save();
   }
 
-  find(query: string, skip?: number, limit?: number) {
-    const regExp = new RegExp(`${query}`, 'i');
-    const filterQuery: RootFilterQuery<Author> = {
-      nameVariants: {
-        $elemMatch: {
-          display: regExp,
-        },
-      },
-    };
-    return this.authorModel.find(filterQuery).limit(limit).skip(skip).exec();
-  }
-
-  findAll() {
-    return this.authorModel.find().exec();
-  }
-
   findById(id: string) {
     return this.authorModel.findById(id).exec();
   }
@@ -162,22 +147,45 @@ export class AuthorsService {
     );
   }
 
-  private addMainNameVariantStage(): PipelineStage.AddFields {
-    return {
-      $addFields: {
-        mainNameVariant: {
-          $arrayElemAt: [
-            {
-              $filter: {
-                input: '$nameVariants',
-                as: 'variant',
-                cond: { $eq: ['$$variant._id', '$mainVariantId'] },
-              },
+  private addMainNameVariantStage(matches: string[]): PipelineStage.AddFields {
+    const fields = {
+      mainNameVariant: {
+        $arrayElemAt: [
+          {
+            $filter: {
+              input: '$nameVariants',
+              as: 'variant',
+              cond: { $eq: ['$$variant._id', '$mainVariantId'] },
             },
-            0,
-          ],
-        },
+          },
+          0,
+        ],
       },
+    };
+
+    // If a search has been performed, add all matching variants (except for the main one)
+    if (matches.length) {
+      fields['matchingNameVariants'] = {
+        $filter: {
+          input: '$nameVariants',
+          as: 'variant',
+          cond: {
+            $and: [
+              { $ne: ['$$variant._id', '$mainVariantId'] },
+              ...matches.map((match) => ({
+                $regexMatch: {
+                  input: '$$variant.display',
+                  regex: match,
+                  options: 'i',
+                },
+              })),
+            ],
+          },
+        },
+      };
+    }
+    return {
+      $addFields: fields,
     };
   }
 

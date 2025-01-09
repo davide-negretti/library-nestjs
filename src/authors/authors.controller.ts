@@ -103,7 +103,7 @@ export class AuthorsController {
     page: string,
     pageSize: string,
   ): PaginationParameters {
-    if (!!from === !!page) {
+    if (!!from && !!page) {
       throw new BadRequestException(
         `Invalid parameters: specify either 'from' or 'page'`,
       );
@@ -124,6 +124,12 @@ export class AuthorsController {
       );
     }
 
+    if (!from && !page) {
+      from = '0';
+    }
+    if (!pageSize) {
+      pageSize = '10';
+    }
     return { skip: from ? +from : +pageSize * (+page - 1), limit: +pageSize };
   }
 }
