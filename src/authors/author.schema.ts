@@ -1,10 +1,20 @@
 import { model, Schema } from 'mongoose';
 
+export const authorTypes = ['person', 'corporate', 'collective'];
+export const authorNameVariantTypes = ['original', 'short', 'pseudonym'];
+export const localizationTypes = ['original', 'transliterated', 'translated'];
+
 const authorNameVariantSchema = new Schema({
   display: { type: String, required: true },
   sorting: { type: String, required: true },
-  type: { type: String, required: true },
-  script: { type: String, default: 'Latn' },
+  type: {
+    type: String,
+    enum: authorNameVariantTypes,
+    required: true,
+  },
+  localization: { type: String, enum: localizationTypes, required: true },
+  script: { type: String, required: false },
+  language: { type: String, required: false },
 });
 
 export const authorSchema = new Schema({
@@ -12,7 +22,7 @@ export const authorSchema = new Schema({
   mainVariantId: { type: Schema.Types.ObjectId, required: true },
   type: {
     type: String,
-    enum: ['person', 'corporate', 'collective'],
+    enum: authorTypes,
     required: true,
   },
 });
