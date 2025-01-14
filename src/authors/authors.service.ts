@@ -17,21 +17,15 @@ export class AuthorsService {
     limit = 20,
   ) {
     const queryStages: PipelineStage[] = [];
-    const words = query?.split(' ');
-    if (words.length) {
+    const words = query?.length ? query.split(' ') : [];
+    if (words?.length) {
       queryStages.push(this.authorMatchStage(words));
     }
     return this.authorModel
       .aggregate([
         ...queryStages,
-        this.addMainNameVariantStage(words),
-        {
-          $project: {
-            _id: 1,
-            mainNameVariant: 1,
-            matchingNameVariants: words.length ? 1 : 0,
-          },
-        },
+        this.addNameVariantsStage(words),
+        this.addProjectNameVariantsStage(words?.length > 0),
         {
           $sort: {
             'mainNameVariant.sorting': 1,
@@ -49,8 +43,8 @@ export class AuthorsService {
     limit = 20,
   ) {
     const queryStages: PipelineStage[] = [];
-    const words = query?.split(' ');
-    if (words.length) {
+    const words = query?.length ? query.split(' ') : [];
+    if (words?.length) {
       queryStages.push(this.authorMatchStage(words));
       queryStages.push(this.authorNameVariantFilterStage(words));
     }
@@ -150,7 +144,7 @@ export class AuthorsService {
     );
   }
 
-  private addMainNameVariantStage(matches: string[]): PipelineStage.AddFields {
+  private addNameVariantsStage(matches: string[]): PipelineStage.AddFields {
     const fields = {
       mainNameVariant: {
         $arrayElemAt: [
@@ -189,6 +183,23 @@ export class AuthorsService {
     }
     return {
       $addFields: fields,
+    };
+  }
+
+  private addProjectNameVariantsStage(
+    showMatching: boolean,
+  ): PipelineStage.Project {
+    return {
+      $project: showMatching
+        ? {
+            _id: 1,
+            mainNameVariant: 1,
+            matchingNameVariants: 1,
+          }
+        : {
+            _id: 1,
+            mainNameVariant: 1,
+          },
     };
   }
 
